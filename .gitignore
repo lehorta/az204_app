@@ -1,0 +1,15 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# React
+frontend-react/node_modules/
+frontend-react/dist/
+frontend-react/.vite/
+
+# Logs
+*.log
+npm-debug.log*
