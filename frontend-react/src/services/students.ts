@@ -1,78 +1,15 @@
 import { getApiUrl } from '../config/api';
 import { Student } from '../types';
+import { CreateAlunoDTO } from '../types';
+import { AlunoApiDTO, AlunoCreateResponseDTO, AlunoListResponseDTO, AlunoUpdateResponseDTO, ApiEnvelope } from '../types';
 import { createApiError } from './apiError';
 
 // Payload da API para cadastro de aluno
-export interface CadastroAlunoPagamento {
-  nome: string;
-  email: string;
-  telefone: string;
-  dataNascimento: string;
-  cpf: string;
-  genero?: string | null;
-  foto?: string | null;
-  saude?: {
-    peso?: number | null;
-    altura?: number | null;
-    tipoSanguineo?: string | null;
-    condicoesMedicas?: string | null;
-    alergias?: string | null;
-    objetivo?: string | null;
-  };
-  contatoEmergencia?: {
-    nome?: string | null;
-    telefone?: string | null;
-    relacionamento?: string | null;
-  };
-  responsavel?: {
-    nome?: string | null;
-    relacionamento?: string | null;
-    cpf?: string | null;
-    identidade?: string | null;
-    telefone?: string | null;
-    celular?: string | null;
-  };
-  endereco?: {
-    rua?: string | null;
-    numero?: string | null;
-    complemento?: string | null;
-    bairro?: string | null;
-    cidade?: string | null;
-    estado?: string | null;
-    cep?: string | null;
-  };
-  pagamento?: {
-    metodo?: string | null;
-    titularCartao?: string | null;
-    numeroCartao?: string | null;
-    validadeCartao?: string | null;
-    cvvCartao?: string | null;
-  };
-  assinatura?: {
-    id?: string | null;
-    nome?: string | null;
-    preco?: number | null;
-    duracao?: number | null;
-    tipo?: string | null;
-    dataInicio?: string | null;
-    dataFim?: string | null;
-    status?: string | null;
-  };
-  status?: string;
-  dataCadastro?: string;
-}
+export type CadastroAlunoPagamento = CreateAlunoDTO;
 
-export interface RespostaAluno {
-  sucesso: boolean;
-  mensagem: string;
-  dados?: Student;
-}
-
-export interface RespostaListaAlunos {
-  sucesso: boolean;
-  mensagem: string;
-  dados?: Student[];
-}
+export type RespostaAluno = AlunoCreateResponseDTO;
+export type RespostaAlunoAtualizacao = AlunoUpdateResponseDTO;
+export type RespostaListaAlunos = AlunoListResponseDTO;
 
 /**
  * Obter token de autenticação
@@ -113,7 +50,7 @@ export const converterAlunoParaCadastro = (student: Student): CadastroAlunoPagam
     cpf: student.cpf,
     genero: student.gender || null,
     foto: student.photo || null,
-    saude: {
+    saudeAluno: {
       peso: student.health?.weight ? parseFloat(String(student.health.weight)) : null,
       altura: student.health?.height ? parseFloat(String(student.health.height)) : null,
       tipoSanguineo: student.health?.bloodType || null,
@@ -124,47 +61,187 @@ export const converterAlunoParaCadastro = (student: Student): CadastroAlunoPagam
     contatoEmergencia: {
       nome: student.emergencyContact?.name || null,
       telefone: student.emergencyContact?.telefone || null,
-      relacionamento: student.emergencyContact?.relationship || null,
+      parentesco: student.emergencyContact?.relationship || null,
     },
     ...(temDadosResponsavel && {
-      responsavel: {
+      responsavelAluno: {
         nome: student.responsible?.name || null,
-        relacionamento: student.responsible?.relationship || null,
+        parentesco: student.responsible?.relationship || null,
         cpf: student.responsible?.cpf || null,
         identidade: student.responsible?.identity || null,
         telefone: student.responsible?.telefone || null,
         celular: student.responsible?.phoneCellular || null,
       },
     }),
-    endereco: {
-      rua: student.address?.street || null,
+    enderecoAluno: {
+      cep: student.address?.zipCode || null,
+      logradouro: student.address?.street || null,
+      tipoLogradouro: null,
       numero: student.address?.number || null,
       complemento: student.address?.complement || null,
       bairro: student.address?.neighborhood || null,
       cidade: student.address?.city || null,
       estado: student.address?.state || null,
-      cep: student.address?.zipCode || null,
     },
-    pagamento: {
+    dadosPagamento: {
       metodo: student.payment?.method || null,
-      titularCartao: student.payment?.cardHolder || null,
-      numeroCartao: student.payment?.cardNumber || null,
-      validadeCartao: student.payment?.cardExpiry || null,
-      cvvCartao: student.payment?.cardCvv || null,
-    },
-    assinatura: {
-      id: student.subscription?.id || null,
-      nome: student.subscription?.name || null,
-      preco: student.subscription?.price || null,
-      duracao: student.subscription?.duration || null,
-      tipo: student.subscription?.type || null,
-      dataInicio: student.subscription?.startDate || null,
-      dataFim: student.subscription?.endDate || null,
-      status: student.subscription?.status || null,
+      dataUltimoPagamento: null,
+      proximaDataVencimento: null,
     },
   };
 
   return pagamento;
+};
+
+export const isApiEnvelope = <T>(response: unknown): response is ApiEnvelope<T> => {
+  return typeof response === 'object' && response !== null && 'sucesso' in response;
+};
+
+export const extrairDadosResposta = <T>(response: T | ApiEnvelope<T>): T | undefined => {
+  if (isApiEnvelope<T>(response)) {
+    return response.dados;
+  }
+
+  return response;
+};
+
+export const extrairMensagemResposta = <T>(response: T | ApiEnvelope<T>): string | undefined => {
+  if (isApiEnvelope<T>(response)) {
+    return response.mensagem;
+  }
+
+  return undefined;
+};
+
+const mapearStatus = (status?: string | number | null): 'ativo' | 'inativo' => {
+  if (status === undefined || status === null) return 'inativo';
+
+  if (typeof status === 'number') {
+    return status === 8 ? 'ativo' : 'inativo';
+  }
+
+  const valor = String(status).trim().toLowerCase();
+  if (valor === 'ativo' || valor.includes('active') || valor === '8') {
+    return 'ativo';
+  }
+
+  return 'inativo';
+};
+
+export const mapAlunoApiToStudent = (aluno: AlunoApiDTO, index = 0): Student => {
+  const apiId = typeof aluno.publicId === 'string' ? aluno.publicId : '';
+  const isZeroGuid = apiId === '00000000-0000-0000-0000-000000000000';
+  const fallbackId = aluno.cpf || aluno.email || `${aluno.nome || 'aluno'}-${index}`;
+  const safeId = apiId && !isZeroGuid ? apiId : fallbackId;
+
+  type EnderecoLegado = {
+    rua?: string | null;
+    numero?: string | null;
+    complemento?: string | null;
+    bairro?: string | null;
+    cidade?: string | null;
+    estado?: string | null;
+    cep?: string | null;
+    logradouro?: string | null;
+    tipoLogradouro?: string | null;
+  };
+
+  const alunoComEnderecoLegado = aluno as AlunoApiDTO & { endereco?: EnderecoLegado | null };
+  const enderecoFonte = aluno.enderecoAluno ?? alunoComEnderecoLegado.endereco;
+  const ruaLegadaRaw = enderecoFonte && 'rua' in enderecoFonte ? enderecoFonte.rua : undefined;
+  const ruaLegada = typeof ruaLegadaRaw === 'string' ? ruaLegadaRaw : undefined;
+
+  return {
+    id: safeId,
+    publicId: apiId && !isZeroGuid ? apiId : undefined,
+    name: aluno.nome,
+    email: aluno.email,
+    telefone: aluno.telefone,
+    dataNascimento: aluno.dataNascimento,
+    cpf: aluno.cpf,
+    photo: aluno.foto || undefined,
+    gender: aluno.genero || undefined,
+    status: mapearStatus(aluno.status),
+    joinDate: aluno.dataCadastro || new Date().toISOString(),
+    health: aluno.saudeAluno
+      ? {
+          weight: aluno.saudeAluno.peso != null ? String(aluno.saudeAluno.peso) : undefined,
+          height: aluno.saudeAluno.altura != null ? String(aluno.saudeAluno.altura) : undefined,
+          bloodType: aluno.saudeAluno.tipoSanguineo || undefined,
+          medicalConditions: aluno.saudeAluno.condicoesMedicas || undefined,
+          allergies: aluno.saudeAluno.alergias || undefined,
+          goal: aluno.saudeAluno.objetivo || undefined,
+        }
+      : undefined,
+    emergencyContact: aluno.contatoEmergencia
+      ? {
+          name: aluno.contatoEmergencia.nome || undefined,
+          telefone: aluno.contatoEmergencia.telefone || undefined,
+          relationship: aluno.contatoEmergencia.parentesco || undefined,
+        }
+      : undefined,
+    responsible: aluno.responsavelAluno
+      ? {
+          name: aluno.responsavelAluno.nome || undefined,
+          relationship: aluno.responsavelAluno.parentesco || undefined,
+          cpf: aluno.responsavelAluno.cpf || undefined,
+          identity: aluno.responsavelAluno.identidade || undefined,
+          telefone: aluno.responsavelAluno.telefone || undefined,
+          phoneCellular: aluno.responsavelAluno.celular || undefined,
+        }
+      : undefined,
+    address: enderecoFonte
+      ? {
+          street: enderecoFonte.logradouro || ruaLegada || undefined,
+          number: enderecoFonte.numero || undefined,
+          complement: enderecoFonte.complemento || undefined,
+          neighborhood: enderecoFonte.bairro || undefined,
+          city: enderecoFonte.cidade || undefined,
+          state: enderecoFonte.estado || undefined,
+          zipCode: enderecoFonte.cep || undefined,
+        }
+      : {
+          street: '',
+          number: '',
+          neighborhood: '',
+          city: '',
+          state: '',
+          zipCode: '',
+        },
+    payment: aluno.dadosPagamento
+      ? {
+          method: aluno.dadosPagamento.metodo || undefined,
+        }
+      : undefined,
+    subscription: aluno.alunoPlanos?.length
+      ? {
+          id: aluno.alunoPlanos[0].plano?.idAssinatura,
+          name: aluno.alunoPlanos[0].plano?.nome,
+          price: aluno.alunoPlanos[0].plano?.preco,
+          duration: aluno.alunoPlanos[0].plano?.duracao,
+          type: aluno.alunoPlanos[0].plano?.tipo,
+          startDate: aluno.alunoPlanos[0].plano?.dataInicio,
+          endDate: aluno.alunoPlanos[0].plano?.dataFim,
+          status: aluno.alunoPlanos[0].plano?.status,
+        }
+      : undefined,
+    matricula: aluno.matricula || undefined,
+    identity: aluno.responsavelAluno?.identidade || undefined,
+    telefoneEmergencia: aluno.contatoEmergencia?.telefone || undefined,
+    cellPhone: aluno.responsavelAluno?.celular || undefined,
+    phoneCellular: aluno.responsavelAluno?.celular || undefined,
+  };
+};
+
+export const mapRespostaListaAlunosParaStudents = (response: RespostaListaAlunos): Student[] => {
+  const estudantes = extrairDadosResposta<AlunoApiDTO[]>(response) || [];
+  return estudantes.map((aluno, index) => mapAlunoApiToStudent(aluno, index));
+};
+
+export const mapRespostaAlunoParaStudent = (response: RespostaAluno): Student | undefined => {
+  const aluno = extrairDadosResposta<AlunoApiDTO>(response);
+  if (!aluno) return undefined;
+  return mapAlunoApiToStudent(aluno);
 };
 
 /**
@@ -214,7 +291,7 @@ export const servicoAlunos = {
    * Busca um aluno por ID
    * GET /api/Alunos/{id}
    */
-  async obterPorId(id: string): Promise<RespostaAluno> {
+  async obterPorId(id: string): Promise<AlunoApiDTO | ApiEnvelope<AlunoApiDTO>> {
     const resposta = await fetch(`${getApiUrl()}/Alunos/${id}`, {
       method: 'GET',
       headers: obterHeadersAutenticacao(),
@@ -232,7 +309,7 @@ export const servicoAlunos = {
    * Atualiza um aluno existente
    * PUT /api/Alunos/{id}
    */
-  async atualizar(id: string, aluno: Student): Promise<RespostaAluno> {
+  async atualizar(id: string, aluno: Student): Promise<RespostaAlunoAtualizacao> {
     const pagamento = converterAlunoParaCadastro(aluno);
 
     const resposta = await fetch(`${getApiUrl()}/Alunos/${id}`, {
@@ -253,7 +330,7 @@ export const servicoAlunos = {
    * Deleta um aluno
    * DELETE /api/Alunos/{id}
    */
-  async deletar(id: string): Promise<RespostaAluno> {
+  async deletar(id: string): Promise<AlunoApiDTO | ApiEnvelope<AlunoApiDTO>> {
     const resposta = await fetch(`${getApiUrl()}/Alunos/${id}`, {
       method: 'DELETE',
       headers: obterHeadersAutenticacao(),

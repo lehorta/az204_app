@@ -56,7 +56,7 @@ namespace Gym.Net
                 }
                 else
                 {
-                    webView.Source = new Uri("http://localhost:5173");
+                    webView.Source = new Uri("http://localhost:5177");
                 }
                 
                 // Aguarda carregamento do React
@@ -73,7 +73,7 @@ namespace Gym.Net
                         MessageBox.Show(
                             $"Erro ao carregar interface ({details}).\n\n" +
                             "Se esta for a versão instalada, verifique se a pasta wwwroot foi incluída.\n" +
-                            "Se estiver em desenvolvimento, verifique se o servidor React está rodando em http://localhost:5173.",
+                            "Se estiver em desenvolvimento, verifique se o servidor React está rodando em http://localhost:5177.",
                             "Erro de Conexão",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error

@@ -1,20 +1,17 @@
 import { FormEvent, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, LogOut, KeyRound, Mail, AlertCircle, Server } from 'lucide-react';
+import { Lock, LogOut, KeyRound, Mail, AlertCircle } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Emoji } from '../../components/Emoji';
 import { useAuth } from '../../contexts/AuthContext';
 import { getErrorMessages } from '../../services/apiError';
-import { getApiUrl, setApiUrl } from '../../config/api';
 
 // Hook
 const useLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string[]>([]);
-  const [apiUrl, setApiUrlState] = useState(getApiUrl());
-  const [showApiConfig, setShowApiConfig] = useState(false);
   const navigate = useNavigate();
   const { login, isLoading, isAuthenticated } = useAuth();
 
@@ -58,15 +55,6 @@ const useLogin = () => {
     }
   };
 
-  const handleApiUrlChange = (newUrl: string) => {
-    setApiUrlState(newUrl);
-    setApiUrl(newUrl);
-  };
-
-  const toggleApiConfig = () => {
-    setShowApiConfig(!showApiConfig);
-  };
-
   return {
     email,
     setEmail,
@@ -74,13 +62,9 @@ const useLogin = () => {
     setPassword,
     error,
     isLoading,
-    apiUrl,
-    showApiConfig,
     handleLogin,
     handleForgotPassword,
     handleExit,
-    handleApiUrlChange,
-    toggleApiConfig,
   };
 };
 
@@ -102,12 +86,8 @@ interface LoginFormProps {
   password: string;
   isLoading: boolean;
   error: string[];
-  apiUrl: string;
-  showApiConfig: boolean;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
-  onApiUrlChange: (value: string) => void;
-  onToggleApiConfig: () => void;
   onSubmit: (e: FormEvent) => void;
   onForgotPassword: () => void;
   onExit: () => void;
@@ -118,12 +98,8 @@ const LoginForm = ({
   password,
   isLoading,
   error,
-  apiUrl,
-  showApiConfig,
   onEmailChange,
   onPasswordChange,
-  onApiUrlChange,
-  onToggleApiConfig,
   onSubmit,
   onForgotPassword,
   onExit,
@@ -172,40 +148,6 @@ const LoginForm = ({
           required
           disabled={isLoading}
         />
-      </div>
-
-      {/* Configuração da API (Temporário) */}
-      <div className="border border-border-primary rounded-lg bg-background-tertiary p-3">
-        <button
-          type="button"
-          onClick={onToggleApiConfig}
-          className="w-full flex items-center justify-between text-sm text-text-secondary hover:text-text-primary transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Server className="w-4 h-4" />
-            <span>Servidor API</span>
-          </div>
-          <span className="text-xs text-text-muted">{showApiConfig ? '▲' : '▼'}</span>
-        </button>
-        
-        {showApiConfig && (
-          <div className="mt-3 pt-3 border-t border-border-primary">
-            <label className="block text-xs font-medium text-text-secondary mb-2">
-              Endereço Base da API
-            </label>
-            <input
-              type="text"
-              value={apiUrl}
-              onChange={(e) => onApiUrlChange(e.target.value)}
-              placeholder="https://api.exemplo.com"
-              className="w-full px-3 py-2 text-sm bg-background-primary border border-border-primary rounded text-text-primary placeholder-text-disabled focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition"
-              disabled={isLoading}
-            />
-            <p className="text-xs text-text-muted mt-2">
-              <Emoji symbol="⚙️" label="config" /> Alteração temporária para esta sessão
-            </p>
-          </div>
-        )}
       </div>
 
       <p className="text-xs text-text-muted">
@@ -264,13 +206,9 @@ export const Login = () => {
     setPassword,
     error,
     isLoading,
-    apiUrl,
-    showApiConfig,
     handleLogin,
     handleForgotPassword,
     handleExit,
-    handleApiUrlChange,
-    toggleApiConfig,
   } = useLogin();
 
   return (
@@ -283,12 +221,8 @@ export const Login = () => {
           password={password}
           isLoading={isLoading}
           error={error}
-          apiUrl={apiUrl}
-          showApiConfig={showApiConfig}
           onEmailChange={setEmail}
           onPasswordChange={setPassword}
-          onApiUrlChange={handleApiUrlChange}
-          onToggleApiConfig={toggleApiConfig}
           onSubmit={handleLogin}
           onForgotPassword={handleForgotPassword}
           onExit={handleExit}

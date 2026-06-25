@@ -10,7 +10,7 @@ interface ExternalApiConfig {
 
 // Configuração padrão (fallback se não conseguir carregar o arquivo externo)
 const DEFAULT_CONFIG = {
-  apiBaseUrl: 'https://f12f-138-185-96-36.ngrok-free.app/api',
+  apiBaseUrl: 'http://localhost:5159/api',
   timeout: 10000,
 };
 

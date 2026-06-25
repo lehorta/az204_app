@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, UserRole, UserStats } from '../../types';
+import { getApiUrl } from '../../config/api';
+import { authService } from '../../services/auth';
 
 export const useUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -9,48 +11,6 @@ export const useUsers = () => {
   const [stats, setStats] = useState<UserStats[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
-
-  // Dados mockados
-  const mockUsers: User[] = [
-    {
-      id: '1',
-      name: 'Carlos Silva',
-      email: 'carlos.silva@academia.com',
-      telefone: '(11) 98765-4321',
-      role: 'Administrador',
-      status: 'ativo',
-      lastAccess: '2026-02-08',
-    },
-    {
-      id: '2',
-      name: 'Ana Santos',
-      email: 'ana.santos@academia.com',
-      telefone: '(11) 97654-3210',
-      role: 'Recepcionista',
-      status: 'ativo',
-      lastAccess: '2026-02-07',
-    },
-    {
-      id: '3',
-      name: 'Roberto Costa',
-      email: 'roberto.costa@academia.com',
-      telefone: '(11) 96543-2109',
-      role: 'Professor',
-      status: 'ativo',
-      lastAccess: '2026-02-08',
-    },
-  ];
-
-  // Carrega usuários
-  useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setUsers(mockUsers);
-      setFilteredUsers(mockUsers);
-      calculateStats(mockUsers);
-      setIsLoading(false);
-    }, 500);
-  }, []);
 
   // Calcula estatísticas
   const calculateStats = (userList: User[]) => {
@@ -62,35 +22,61 @@ export const useUsers = () => {
       Recepcionista: 'bg-yellow-500',
       Professor: 'bg-orange-500',
     };
-
-    const newStats: UserStats[] = roles.map((role) => ({
+    setStats(roles.map((role) => ({
       role,
       count: userList.filter((u) => u.role === role).length,
       color: colors[role],
-    }));
-
-    setStats(newStats);
+    })));
   };
+
+  // Carrega usuários da API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      try {
+        const token = authService.getToken();
+        const response = await fetch(`${getApiUrl()}/Users`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        // A API retorna array de usuários; adaptar campos para o tipo User do frontend
+        const data = await response.json();
+        const mapped: User[] = (Array.isArray(data) ? data : data.dados ?? []).map((u: any) => ({
+          id: String(u.id ?? u.publicId ?? ''),
+          name: u.nome ?? u.name ?? '',
+          email: u.email ?? '',
+          telefone: u.ramal ?? u.telefone ?? '',
+          role: u.roles?.[0] ?? u.role ?? 'Recepcionista',
+          status: u.isDeleted ? 'inativo' : 'ativo',
+          lastAccess: u.lastAccess ?? '',
+        }));
+        setUsers(mapped);
+        setFilteredUsers(mapped);
+        calculateStats(mapped);
+      } catch (err) {
+        console.error('Erro ao carregar usuários:', err);
+        setUsers([]);
+        setFilteredUsers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   // Busca usuários
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    
     if (!query.trim()) {
       setFilteredUsers(users);
       return;
     }
-
-    const filtered = users.filter((user) => {
-      const searchLower = query.toLowerCase();
-      return (
-        user.name.toLowerCase().includes(searchLower) ||
-        user.email.toLowerCase().includes(searchLower) ||
-        user.role.toLowerCase().includes(searchLower)
-      );
-    });
-
-    setFilteredUsers(filtered);
+    const lower = query.toLowerCase();
+    setFilteredUsers(users.filter((u) =>
+      u.name.toLowerCase().includes(lower) ||
+      u.email.toLowerCase().includes(lower) ||
+      u.role.toLowerCase().includes(lower)
+    ));
   };
 
   // Editar usuário
@@ -105,9 +91,13 @@ export const useUsers = () => {
   // Deletar usuário
   const handleDelete = (userId: string) => {
     if (confirm('Deseja realmente excluir este usuário?')) {
-      setUsers(users.filter((u) => u.id !== userId));
-      setFilteredUsers(filteredUsers.filter((u) => u.id !== userId));
-      console.log('Usuário deletado:', userId);
+      const updated = users.filter((u) => u.id !== userId);
+      setUsers(updated);
+      setFilteredUsers(updated.filter((u) => {
+        const lower = searchQuery.toLowerCase();
+        return !lower || u.name.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower);
+      }));
+      calculateStats(updated);
     }
   };
 
@@ -117,22 +107,14 @@ export const useUsers = () => {
     setIsFormOpen(true);
   };
 
-  // Salvar usuário
+  // Salvar usuário (local — persistência via API pode ser adicionada depois)
   const handleSaveUser = (user: User) => {
-    if (selectedUser) {
-      // Atualizar usuário existente
-      const updatedUsers = users.map((u) => (u.id === user.id ? user : u));
-      setUsers(updatedUsers);
-      setFilteredUsers(updatedUsers);
-      console.log('Usuário atualizado:', user);
-    } else {
-      // Criar novo usuário
-      const newUsers = [...users, user];
-      setUsers(newUsers);
-      setFilteredUsers(newUsers);
-      calculateStats(newUsers);
-      console.log('Usuário criado:', user);
-    }
+    const updatedUsers = selectedUser
+      ? users.map((u) => (u.id === user.id ? user : u))
+      : [...users, user];
+    setUsers(updatedUsers);
+    setFilteredUsers(updatedUsers);
+    calculateStats(updatedUsers);
   };
 
   return {

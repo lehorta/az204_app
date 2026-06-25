@@ -119,14 +119,25 @@ export const StudentsView = ({
                     <div className="flex items-start gap-2">
                       <MapPin className="w-4 h-4 text-text-secondary flex-shrink-0 mt-0.5" />
                       <div className="text-xs text-text-secondary space-y-1 flex-1">
-                        <p>
-                          {student.address.street}, {student.address.number}
-                          {student.address.complement && ` - ${student.address.complement}`}
-                        </p>
-                        <p>
-                          {student.address.neighborhood}, {student.address.city} - {student.address.state}
-                        </p>
-                        <p className="font-mono">{student.address.zipCode}</p>
+                        {student.address.street || student.address.number || student.address.neighborhood || student.address.city || student.address.state || student.address.zipCode ? (
+                          <>
+                            {(student.address.street || student.address.number || student.address.complement) && (
+                              <p>
+                                {[student.address.street, student.address.number].filter(Boolean).join(', ')}
+                                {student.address.complement && ` - ${student.address.complement}`}
+                              </p>
+                            )}
+                            {(student.address.neighborhood || student.address.city || student.address.state) && (
+                              <p>
+                                {[student.address.neighborhood, student.address.city].filter(Boolean).join(', ')}
+                                {student.address.state && ` - ${student.address.state}`}
+                              </p>
+                            )}
+                            {student.address.zipCode && <p className="font-mono">{student.address.zipCode}</p>}
+                          </>
+                        ) : (
+                          <p>Endereço não informado</p>
+                        )}
                       </div>
                     </div>
                   </div>

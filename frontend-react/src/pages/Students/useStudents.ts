@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Student, StudentStats } from '../../types';
-import { studentsService } from '../../services/students';
+import { mapRespostaListaAlunosParaStudents, studentsService } from '../../services/students';
 
 export const useStudents = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -17,45 +17,8 @@ export const useStudents = () => {
       setIsLoading(true);
       try {
         const response = await studentsService.getAll();
-        
-        // A API retorna um array direto
-        const estudantes = Array.isArray(response) ? response : response.dados || [];
-        
-        // Mapear dados da API para o formato Student
-        const mappedStudents: Student[] = estudantes.map((aluno: any, index: number) => {
-          const apiId = typeof aluno.publicId === 'string' ? aluno.publicId : '';
-          const isZeroGuid = apiId === '00000000-0000-0000-0000-000000000000';
-          const fallbackId = aluno.cpf || aluno.email || `${aluno.nome || 'aluno'}-${index}`;
-          const safeId = apiId && !isZeroGuid ? apiId : fallbackId;
+        const mappedStudents = mapRespostaListaAlunosParaStudents(response);
 
-          return {
-            id: safeId,
-            publicId: apiId && !isZeroGuid ? apiId : undefined,
-            name: aluno.nome,
-            email: aluno.email,
-            telefone: aluno.telefone,
-            dataNascimento: aluno.dataNascimento,
-            cpf: aluno.cpf,
-            photo: aluno.foto || undefined,
-            gender: aluno.genero || undefined,
-            status: aluno.status === 8 ? 'ativo' : 'inativo',
-            joinDate: aluno.dataCadastro,
-            // Campos opcionais da API
-            health: aluno.saudeAluno || undefined,
-            emergencyContact: aluno.contatoEmergencia || undefined,
-            responsible: aluno.responsavelAluno || undefined,
-            address: aluno.enderecoAluno || {
-              street: '',
-              number: '',
-              neighborhood: '',
-              city: '',
-              state: '',
-              zipCode: '',
-            },
-            payment: aluno.dadosPagamento || undefined,
-          };
-        });
-        
         setStudents(mappedStudents);
         setFilteredStudents(mappedStudents);
         calculateStats(mappedStudents);

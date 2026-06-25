@@ -169,9 +169,7 @@ export interface StudentAddress {
 export interface StudentPayment {
   method?: 'cartao' | 'pix' | 'boleto' | 'dinheiro' | string;
   cardHolder?: string;
-  cardNumber?: string;
-  cardExpiry?: string;
-  cardCvv?: string;
+  lastFourDigits?: string; // apenas últimos 4 dígitos (nunca número completo)
 }
 
 export interface StudentSubscription {
@@ -208,6 +206,7 @@ export interface Attachment {
 export interface Student {
   id: string;
   publicId?: string;
+  matricula?: string;
   name: string;
   email: string;
   telefone: string;
@@ -260,3 +259,96 @@ export interface StudentStats {
   value: number;
   color: string;
 }
+
+// API DTOs (contrato backend)
+export interface CreateAlunoSaudeDTO {
+  peso?: number | null;
+  altura?: number | null;
+  tipoSanguineo?: string | null;
+  condicoesMedicas?: string | null;
+  alergias?: string | null;
+  objetivo?: string | null;
+}
+
+export interface CreateAlunoContatoEmergenciaDTO {
+  nome?: string | null;
+  telefone?: string | null;
+  parentesco?: string | null;
+}
+
+export interface CreateAlunoResponsavelDTO {
+  nome?: string | null;
+  parentesco?: string | null;
+  cpf?: string | null;
+  identidade?: string | null;
+  telefone?: string | null;
+  celular?: string | null;
+}
+
+export interface CreateAlunoEnderecoDTO {
+  cep?: string | null;
+  logradouro?: string | null;
+  tipoLogradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+}
+
+export interface CreateAlunoDadosPagamentoDTO {
+  metodo?: string | null;
+  dataUltimoPagamento?: string | null;
+  proximaDataVencimento?: string | null;
+}
+
+export interface CreateAlunoDTO {
+  nome: string;
+  email: string;
+  telefone: string;
+  dataNascimento: string;
+  cpf: string;
+  genero?: string | null;
+  foto?: string | null;
+  saudeAluno?: CreateAlunoSaudeDTO;
+  contatoEmergencia?: CreateAlunoContatoEmergenciaDTO;
+  responsavelAluno?: CreateAlunoResponsavelDTO;
+  enderecoAluno?: CreateAlunoEnderecoDTO;
+  dadosPagamento?: CreateAlunoDadosPagamentoDTO;
+  status?: string;
+  dataCadastro?: string;
+}
+
+export type AlunoApiDTO = Omit<CreateAlunoDTO, 'status'> & {
+  id?: number;
+  publicId?: string;
+  matricula?: string;
+  academiaId?: number;
+  status?: string | number | null;
+  dataCadastro?: string;
+  alunoPlanos?: Array<{
+    planoId: number;
+    dataIniVigencia: string;
+    dataFimVigencia: string;
+    plano?: {
+      idAssinatura: string;
+      nome: string;
+      preco: number;
+      duracao: number;
+      tipo: string;
+      dataInicio: string;
+      dataFim: string;
+      status: string;
+    };
+  }>;
+};
+
+export interface ApiEnvelope<T> {
+  sucesso: boolean;
+  mensagem: string;
+  dados?: T;
+}
+
+export type AlunoCreateResponseDTO = AlunoApiDTO | ApiEnvelope<AlunoApiDTO>;
+export type AlunoUpdateResponseDTO = AlunoApiDTO | ApiEnvelope<AlunoApiDTO>;
+export type AlunoListResponseDTO = AlunoApiDTO[] | ApiEnvelope<AlunoApiDTO[]>;

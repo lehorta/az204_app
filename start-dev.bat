@@ -35,7 +35,7 @@ start "Frontend React" cmd /k "cd frontend-react && npm run dev"
 echo.
 echo [OK] Aplicacao iniciada com sucesso!
 echo [*] Backend: http://localhost:5000
-echo [*] Frontend: http://localhost:5173
+echo [*] Frontend: http://localhost:5177
 goto :fim
 
 :backend
@@ -53,7 +53,7 @@ echo [*] Iniciando Frontend (React)...
 start "Frontend React" cmd /k "cd frontend-react && npm run dev"
 echo.
 echo [OK] Frontend iniciado!
-echo [*] URL: http://localhost:5173
+echo [*] URL: http://localhost:5177
 goto :fim
 
 :invalido

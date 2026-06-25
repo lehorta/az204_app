@@ -2,11 +2,18 @@ import { useState, useRef, useEffect } from 'react';
 import { Student, Attachment } from '../../types';
 import { X, User, MapPin, CreditCard, Zap, History, Camera, ZoomIn, Activity, Phone, UserCheck, AlertCircle, Paperclip, Upload, FileText, Image as ImageIcon, Trash2, Plus, Video, UserCircle2, CheckCircle } from 'lucide-react';
 import ReactInputMask from "react-input-mask";
-import { studentsService } from '../../services/students';
+import { extrairMensagemResposta, mapRespostaAlunoParaStudent, studentsService } from '../../services/students';
 import { getErrorMessages } from '../../services/apiError';
+import { getApiUrl } from '../../config/api';
+import { authService } from '../../services/auth';
 
 // @ts-ignore
 const InputMask = ReactInputMask;
+
+interface MotivoCancelamento {
+  id: number;
+  descricao: string;
+}
 
 interface StudentFormProps {
   student?: Student;
@@ -33,6 +40,26 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
   // Estados para histórico
   const [historyDescription, setHistoryDescription] = useState('');
   const [historyOccurredAt, setHistoryOccurredAt] = useState('');
+
+  // Motivos de cancelamento
+  const [motivosCancelamento, setMotivosCancelamento] = useState<MotivoCancelamento[]>([]);
+  useEffect(() => {
+    const fetchMotivos = async () => {
+      try {
+        const token = authService.getToken();
+        const resp = await fetch(`${getApiUrl()}/MotivosCancelamento/ativos`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          setMotivosCancelamento(Array.isArray(data) ? data : data.dados ?? []);
+        }
+      } catch {
+        // silencioso — campo de motivo simplesmente ficará sem opções da API
+      }
+    };
+    fetchMotivos();
+  }, []);
   
   // Estados e refs para webcam
   const [showWebcam, setShowWebcam] = useState(false);
@@ -306,6 +333,21 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
     }
   };
 
+  // Validação CPF mod-11
+  const isValidCpf = (cpf: string): boolean => {
+    const digits = cpf.replace(/\D/g, '');
+    if (digits.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(digits)) return false;
+    const calcDigit = (base: string, factor: number) => {
+      const sum = base.split('').reduce((acc, d) => acc + parseInt(d) * factor--, 0);
+      const rem = (sum * 10) % 11;
+      return rem >= 10 ? 0 : rem;
+    };
+    const d1 = calcDigit(digits.slice(0, 9), 10);
+    const d2 = calcDigit(digits.slice(0, 10), 11);
+    return d1 === parseInt(digits[9]) && d2 === parseInt(digits[10]);
+  };
+
   // Validação dos dados básicos
   const validateBasicData = (): boolean => {
     const errors: string[] = [];
@@ -340,6 +382,8 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
     // Validar CPF
     if (!formData.cpf || formData.cpf.trim() === '') {
       errors.push('CPF é obrigatório');
+    } else if (!isValidCpf(formData.cpf)) {
+      errors.push('CPF inválido');
     }
 
     setValidationErrors(errors);
@@ -461,21 +505,19 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
         const resposta = await studentsService.create(formData);
         console.log('Aluno criado com sucesso', resposta);
 
-        // Se a criação foi bem-sucedida e retornou dados, recarregar o formulário em modo edição
-        if (resposta.sucesso && resposta.dados) {
-          // Atualizar o formulário com os dados do aluno criado (incluindo o ID gerado)
-          setFormData(resposta.dados);
-          setSuccessMessage(resposta.mensagem || 'Aluno criado com sucesso! Agora está em modo edição.');
-          
-          // Chamar o callback com os dados completos do aluno criado
-          onSave(resposta.dados);
-          
-          // Fechar após mostrar a mensagem de sucesso
+        const alunoCriado = mapRespostaAlunoParaStudent(resposta);
+
+        if (alunoCriado) {
+          setFormData(alunoCriado);
+          const mensagem = extrairMensagemResposta(resposta)
+            || 'Aluno criado com sucesso! Agora está em modo edição.';
+          setSuccessMessage(mensagem || 'Aluno criado com sucesso! Agora está em modo edição.');
+          onSave(alunoCriado);
+
           setTimeout(() => {
             onClose();
           }, 1500);
         } else {
-          // Se algo deu errado, fechar mesmo assim
           onSave(formData);
           onClose();
         }
@@ -527,9 +569,16 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
       <div className="bg-background-secondary border border-border-primary rounded-lg w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border-primary">
-          <h2 className="text-2xl font-bold text-text-primary">
-            {student ? 'Editar Aluno' : 'Novo Aluno'}
-          </h2>
+          <div>
+            <h2 className="text-2xl font-bold text-text-primary">
+              {student ? 'Editar Aluno' : 'Novo Aluno'}
+            </h2>
+            {student?.matricula && (
+              <p className="text-xs text-text-secondary mt-1">
+                Matrícula: <span className="font-mono font-semibold text-text-primary">{student.matricula}</span>
+              </p>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-background-tertiary rounded-lg transition-colors"
@@ -1010,6 +1059,12 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
               </div>
               {formData.payment?.method === 'cartao' && (
                 <div className="space-y-4 p-4 bg-background-tertiary rounded-lg border border-border-primary">
+                  <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-yellow-400">
+                      Dados completos do cartão não são armazenados. Utilize gateway de pagamento (PIX ou boleto recomendados).
+                    </p>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-2">
                       Titular do Cartão
@@ -1024,42 +1079,17 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Número do Cartão
+                      Últimos 4 dígitos
                     </label>
                     <input
                       type="text"
-                      name="payment.cardNumber"
-                      value={formData.payment?.cardNumber || ''}
+                      name="payment.lastFourDigits"
+                      value={formData.payment?.lastFourDigits || ''}
                       onChange={handleInputChange}
-                      placeholder="0000 0000 0000 0000"
+                      placeholder="0000"
+                      maxLength={4}
                       className="w-full px-3 py-2 bg-background-secondary border border-border-primary rounded-lg text-text-primary focus:border-brand-primary outline-none"
                     />
-                  </div>
-                    <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Validade
-                      </label>
-                      <input
-                        type="text"
-                        name="payment.cardExpiry"
-                        value={formData.payment?.cardExpiry || ''}
-                        onChange={handleInputChange}
-                        placeholder="MM/AA"
-                        className="w-full px-3 py-2 bg-background-secondary border border-border-primary rounded-lg text-text-primary focus:border-brand-primary outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-2">CVV</label>
-                      <input
-                        type="text"
-                        name="payment.cardCvv"
-                        value={formData.payment?.cardCvv || ''}
-                        onChange={handleInputChange}
-                        placeholder="000"
-                        className="w-full px-3 py-2 bg-background-secondary border border-border-primary rounded-lg text-text-primary focus:border-brand-primary outline-none"
-                      />
-                    </div>
                   </div>
                 </div>
               )}
@@ -1145,6 +1175,27 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
                   <option value="cancelado">Cancelado</option>
                 </select>
               </div>
+              {formData.subscription?.status === 'cancelado' && (
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    Motivo de Cancelamento
+                  </label>
+                  <select
+                    name="motivoCancelamentoId"
+                    value={(formData as any).motivoCancelamentoId || ''}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 bg-background-tertiary border border-border-primary rounded-lg text-text-primary focus:border-brand-primary outline-none"
+                  >
+                    <option value="">Selecione o motivo...</option>
+                    {motivosCancelamento.length > 0
+                      ? motivosCancelamento.map((m) => (
+                          <option key={m.id} value={m.id}>{m.descricao}</option>
+                        ))
+                      : <option disabled>Carregando motivos...</option>
+                    }
+                  </select>
+                </div>
+              )}
             </div>
           )}
 
