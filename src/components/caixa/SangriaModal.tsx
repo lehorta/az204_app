@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   registrarSangriaSchema,
@@ -27,7 +27,6 @@ export const SangriaModal = ({
 
   const {
     register,
-    control,
     handleSubmit,
     formState: { errors },
     reset,

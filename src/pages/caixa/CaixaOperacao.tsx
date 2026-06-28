@@ -4,9 +4,7 @@ import { useSessao, useSangrias } from "@/api/caixa.api";
 import { useNavigate } from "react-router-dom";
 import { SangriaModal } from "@/components/caixa/SangriaModal";
 import {
-  ArrowDown,
   AlertTriangle,
-  Clock,
   DollarSign,
   Droplet,
   TrendingDown,
@@ -14,7 +12,6 @@ import {
   Activity,
 } from "lucide-react";
 import { formatCurrency, formatDateTime } from "@/utils/format";
-import { StatusDivergencia } from "@/types/caixa.types";
 
 export const CaixaOperacao = () => {
   const { sessaoId } = useParams<{ sessaoId: string }>();
@@ -33,7 +30,6 @@ export const CaixaOperacao = () => {
   const {
     data: sangrias,
     isLoading: sangriasLoading,
-    error: sangriasError,
     refetch: refetchSangrias,
   } = useSangrias(sessaoId || "");
 

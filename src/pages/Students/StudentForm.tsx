@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type InputHTMLAttributes } from 'react';
 import { Student, Attachment } from '../../types';
 import { X, User, MapPin, CreditCard, Zap, History, Camera, ZoomIn, Activity, Phone, UserCheck, AlertCircle, Paperclip, Upload, FileText, Image as ImageIcon, Trash2, Plus, Video, UserCircle2, CheckCircle } from 'lucide-react';
 import ReactInputMask from "react-input-mask";
@@ -863,7 +863,7 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
                     value={formData.cpf}
                     onChange={handleInputChange}
                   >
-                    {(inputProps) => (
+                    {(inputProps: InputHTMLAttributes<HTMLInputElement>) => (
                       <input
                         {...inputProps}
                         type="text"

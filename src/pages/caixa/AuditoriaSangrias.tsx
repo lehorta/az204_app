@@ -11,7 +11,6 @@ import {
   Droplet,
   TrendingUp,
   PieChart,
-  AlertTriangle,
   ChevronLeft,
   ChevronRight,
   Calendar,
@@ -30,8 +29,10 @@ export const AuditoriaSangrias = () => {
 
   const { data: sangrias, isLoading: sangriaLoading } =
     useAuditoriaSangria(filtro);
-  const { data: resumo, isLoading: resumoLoading } =
-    useResumoAuditoriaSangria(filtro.dataInicio, filtro.dataFim);
+  const { data: resumo } = useResumoAuditoriaSangria(
+    filtro.dataInicio,
+    filtro.dataFim
+  );
 
   const getMotivoLabel = (motivo: string) => {
     return (

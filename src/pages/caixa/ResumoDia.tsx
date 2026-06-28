@@ -7,7 +7,6 @@ import {
   Activity,
   CheckCircle2,
   Clock,
-  Droplet,
   RefreshCw,
   TrendingDown,
   User,
@@ -16,7 +15,7 @@ import {
 
 export const ResumoDia = () => {
   const [data, setData] = useState<Date>(new Date());
-  const [selectedFiliaal, setSelectedFilial] = useState<number | undefined>();
+  const [selectedFiliaal] = useState<number | undefined>();
 
   const {
     data: resumo,
