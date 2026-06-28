@@ -1,10 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useHistoricoSessoes } from "@/api/caixa.api";
-import {
-  FiltroHistoricoSessionDTO,
-  STATUS_SESSAO,
-  STATUS_DIVERGENCIA,
-} from "@/schemas/caixa.schemas";
+import { FiltroHistoricoSessionDTO } from "@/schemas/caixa.schemas";
 import { formatCurrency, formatDateTime } from "@/utils/format";
 import {
   Calendar,

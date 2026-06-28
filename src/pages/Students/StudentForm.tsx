@@ -863,7 +863,7 @@ export const StudentForm = ({ student, isOpen, onClose, onSave }: StudentFormPro
                     value={formData.cpf}
                     onChange={handleInputChange}
                   >
-                    {(inputProps) => (
+                    {(inputProps: any) => (
                       <input
                         {...inputProps}
                         type="text"

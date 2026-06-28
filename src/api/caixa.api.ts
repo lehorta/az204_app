@@ -416,6 +416,9 @@ export const useCaixaRelatorios = () => {
   const relatorioDivergencias = useRelatorioDivergencias({
     dataInicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
     dataFim: new Date(),
+    tipoDivergencia: "Todas",
+    pagina: 1,
+    tamanhoPagina: 10,
   });
 
   const resumoAuditoria = useResumoAuditoriaSangria(
