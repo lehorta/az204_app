@@ -10,7 +10,7 @@ interface ExternalApiConfig {
 
 // Configuração padrão (fallback se não conseguir carregar o arquivo externo)
 const DEFAULT_CONFIG = {
-  apiBaseUrl: 'http://localhost:5159/api',
+  apiBaseUrl: 'https://projetobrowfield-dje0ebc6asc2a5am.westus2-01.azurewebsites.net/api',
   timeout: 10000,
 };
 
